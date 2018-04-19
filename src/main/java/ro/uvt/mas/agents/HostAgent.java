@@ -2,17 +2,29 @@ package ro.uvt.mas.agents;
 
 import jade.core.AID;
 import jade.core.Agent;
+import jade.core.behaviours.CyclicBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
 import jade.domain.FIPAException;
+import jade.lang.acl.ACLMessage;
 import jade.wrapper.AgentController;
 import jade.wrapper.ControllerException;
 import jade.wrapper.PlatformController;
+import ro.uvt.mas.Messages;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 import java.util.Vector;
 
+import static ro.uvt.mas.Messages.INTRO;
+
 public class HostAgent extends Agent {
-    private Vector<AID> guests;
+    public static String HOST_NAME = "host";
+    private List<AID> guests;
+    private int arrivedGuests;
+    private boolean isThePartyOver = false;
+
     protected void setup() {
         System.out.println("--- Starting the host agent ---");
         try {
@@ -22,6 +34,26 @@ public class HostAgent extends Agent {
 
             inviteGuests(10);
 
+            addBehaviour(new CyclicBehaviour(this) {
+                @Override
+                public void action() {
+                    ACLMessage message = receive();
+                    if (message != null) {
+                        if (message.getContent().equals(Messages.HELLO)) {
+                            System.out.println("A new guest has arrived.");
+                            arrivedGuests++;
+
+                            if(arrivedGuests == guests.size()) {
+                                System.out.println("All guests have arrived. Starting the party.");
+                                startTheFun();
+                            }
+                        }
+                    } else {
+                        block();
+                    }
+                }
+            });
+
         } catch (FIPAException e) {
             System.out.println("An exception occurred in Host agent: " + e);
             e.printStackTrace();
@@ -29,7 +61,7 @@ public class HostAgent extends Agent {
     }
 
     private void inviteGuests(int cnt) {
-        guests = new Vector<>();
+        guests = new ArrayList();
         PlatformController platformController = getContainerController();
         for(int i = 1; i <= cnt; i++) {
             try {
@@ -44,4 +76,35 @@ public class HostAgent extends Agent {
 
         }
     }
+
+    private void startTheFun() {
+        System.out.println("Let the fun begin");
+
+        sendMessage(ACLMessage.INFORM, Messages.RUMOUR, getRandomGuest(null));
+    }
+
+    private void introduceGuest(AID guest) {
+        if(!isThePartyOver) {
+            AID otherGuest = getRandomGuest(guest);
+            sendMessage(ACLMessage.INFORM, INTRO + guest.getName(), otherGuest);
+        }
+    }
+
+    private AID getRandomGuest(AID differentThan) {
+        AID selected;
+
+        do {
+            selected = guests.get((new Random()).nextInt(guests.size()));
+        } while(selected != null && selected.equals(differentThan));
+
+        return selected;
+    }
+
+    private void sendMessage(int type, String messageContent, AID agent) {
+        ACLMessage message = new ACLMessage(type);
+        message.setContent(messageContent);
+        message.addReceiver(agent);
+        send(message);
+    }
 }
+
