@@ -3,8 +3,6 @@ package ro.uvt.mas.agents;
 
 import jade.core.AID;
 import jade.core.Agent;
-import jade.core.MessageQueue;
-import jade.core.Service;
 import jade.core.behaviours.CyclicBehaviour;
 import jade.domain.DFService;
 import jade.domain.FIPAAgentManagement.DFAgentDescription;
@@ -15,7 +13,7 @@ import jade.lang.acl.MessageTemplate;
 import ro.uvt.mas.Messages;
 
 public class GuestAgent extends Agent {
-    private boolean rumourHeard = false;
+    private boolean knowsTheRumour = false;
 
     protected void setup() {
         System.out.println("Starting guest: " + getLocalName());
@@ -39,6 +37,10 @@ public class GuestAgent extends Agent {
                     if (message != null) {
                         if(message.getContent().startsWith(Messages.RUMOUR)) {
                             handleRumour();
+                        } else if (message.getContent().startsWith(Messages.INTRO)) {
+                            handleIntro(message.getContent().substring(message.getContent().indexOf("-")));
+                        } else if (message.getContent().equals(Messages.HELLO)) {
+                            handleHello(message.getSender());
                         }
                     } else {
                         block();
@@ -48,7 +50,6 @@ public class GuestAgent extends Agent {
         } catch (FIPAException e) {
             System.out.println("An exception occurred in GuestAgent: " + e);
             e.printStackTrace();
-
         }
     }
 
@@ -57,10 +58,26 @@ public class GuestAgent extends Agent {
     }
 
     private void handleRumour() {
-        if(!rumourHeard) {
+        if(!knowsTheRumour) {
             System.out.println(getLocalName() + " received the rumour for the first time.");
             sendMessage(ACLMessage.INFORM, Messages.RUMOUR, HostAgent.HOST_NAME);
-            rumourHeard = true;
+            knowsTheRumour = true;
+        }
+    }
+
+    private void handleIntro(String name) {
+        System.out.println(getLocalName() + " was introduced to " + name);
+        AID guest = new AID(name, AID.ISGUID);
+        sendMessage(ACLMessage.INFORM, Messages.HELLO, guest);
+        sendMessage(ACLMessage.REQUEST, Messages.INTRO, HostAgent.HOST_NAME);
+    }
+
+    private void handleHello(AID agent) {
+        System.out.println(getLocalName() + " was greeted by " + agent.getName());
+
+        if (knowsTheRumour) {
+            System.out.println(getLocalName() + " passing the rumour to " + agent.getName());
+            sendMessage(ACLMessage.INFORM, Messages.RUMOUR, agent);
         }
     }
 
@@ -77,5 +94,4 @@ public class GuestAgent extends Agent {
         message.addReceiver(agent);
         send(message);
     }
-
 }

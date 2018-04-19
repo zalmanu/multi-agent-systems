@@ -24,6 +24,7 @@ public class HostAgent extends Agent {
     private List<AID> guests;
     private int arrivedGuests;
     private boolean isThePartyOver = false;
+    private int rumoursReceived;
 
     protected void setup() {
         System.out.println("--- Starting the host agent ---");
@@ -47,6 +48,10 @@ public class HostAgent extends Agent {
                                 System.out.println("All guests have arrived. Starting the party.");
                                 startTheFun();
                             }
+                        } else if (message.getPerformative() == ACLMessage.REQUEST && message.getContent().equals(Messages.INTRO)) {
+                            introduceGuest(message.getSender());
+                        } else if (message.getContent().equals(Messages.RUMOUR)) {
+                            handleRumourUpdate();
                         }
                     } else {
                         block();
@@ -81,6 +86,7 @@ public class HostAgent extends Agent {
         System.out.println("Let the fun begin");
 
         sendMessage(ACLMessage.INFORM, Messages.RUMOUR, getRandomGuest(null));
+        introduceGuest(getRandomGuest(null));
     }
 
     private void introduceGuest(AID guest) {
@@ -105,6 +111,15 @@ public class HostAgent extends Agent {
         message.setContent(messageContent);
         message.addReceiver(agent);
         send(message);
+    }
+
+    private void handleRumourUpdate() {
+        rumoursReceived++;
+
+        if (rumoursReceived == guests.size()) {
+            isThePartyOver = true;
+            System.out.println("All the guests have heard the rumours. Ending the party.")
+        }
     }
 }
 
