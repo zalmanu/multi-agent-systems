@@ -15,7 +15,6 @@ import ro.uvt.mas.Messages;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.Vector;
 
 import static ro.uvt.mas.Messages.INTRO;
 
@@ -41,7 +40,7 @@ public class HostAgent extends Agent {
                     ACLMessage message = receive();
                     if (message != null) {
                         if (message.getContent().equals(Messages.HELLO)) {
-                            System.out.println("A new guest has arrived.");
+                            System.out.println(message.getSender().getLocalName() + " has arrived");
                             arrivedGuests++;
 
                             if(arrivedGuests == guests.size()) {
@@ -117,8 +116,25 @@ public class HostAgent extends Agent {
         rumoursReceived++;
 
         if (rumoursReceived == guests.size()) {
+            System.out.println("All the guests have heard the rumours. Ending the party.");
+
             isThePartyOver = true;
-            System.out.println("All the guests have heard the rumours. Ending the party.")
+            endTheFun();
+        }
+    }
+
+    private void endTheFun() {
+        for(AID guest : guests) {
+            sendMessage(ACLMessage.INFORM, Messages.THE_END, guest);
+        }
+
+        System.out.println("Ending HostAgent");
+
+        try {
+            DFService.deregister(this);
+            doDelete();
+        } catch (FIPAException e) {
+            e.printStackTrace();
         }
     }
 }

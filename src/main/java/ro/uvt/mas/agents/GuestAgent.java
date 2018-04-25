@@ -16,7 +16,7 @@ public class GuestAgent extends Agent {
     private boolean knowsTheRumour = false;
 
     protected void setup() {
-        System.out.println("Starting guest: " + getLocalName());
+        System.out.println("Starting guest " + getLocalName());
         try {
             DFAgentDescription guestDescr = new DFAgentDescription();
             guestDescr.setName(getAID());
@@ -38,9 +38,11 @@ public class GuestAgent extends Agent {
                         if(message.getContent().startsWith(Messages.RUMOUR)) {
                             handleRumour();
                         } else if (message.getContent().startsWith(Messages.INTRO)) {
-                            handleIntro(message.getContent().substring(message.getContent().indexOf("-")));
+                            handleIntro(message.getContent().substring(message.getContent().indexOf("-")+1));
                         } else if (message.getContent().equals(Messages.HELLO)) {
                             handleHello(message.getSender());
+                        } else if (message.getContent().equals(Messages.THE_END)) {
+                            handleTheEnd();
                         }
                     } else {
                         block();
@@ -59,26 +61,33 @@ public class GuestAgent extends Agent {
 
     private void handleRumour() {
         if(!knowsTheRumour) {
-            System.out.println(getLocalName() + " received the rumour for the first time.");
+            System.out.println(getLocalName() + " received the rumour for the first time");
             sendMessage(ACLMessage.INFORM, Messages.RUMOUR, HostAgent.HOST_NAME);
             knowsTheRumour = true;
         }
     }
 
     private void handleIntro(String name) {
-        System.out.println(getLocalName() + " was introduced to " + name);
         AID guest = new AID(name, AID.ISGUID);
         sendMessage(ACLMessage.INFORM, Messages.HELLO, guest);
         sendMessage(ACLMessage.REQUEST, Messages.INTRO, HostAgent.HOST_NAME);
     }
 
     private void handleHello(AID agent) {
-        System.out.println(getLocalName() + " was greeted by " + agent.getName());
-
         if (knowsTheRumour) {
-            System.out.println(getLocalName() + " passing the rumour to " + agent.getName());
             sendMessage(ACLMessage.INFORM, Messages.RUMOUR, agent);
         }
+    }
+
+    private void handleTheEnd() {
+        System.out.println(getLocalName() + " is leaving");
+        try {
+            DFService.deregister(this);
+            doDelete();
+        } catch (FIPAException e) {
+            e.printStackTrace();
+        }
+
     }
 
     private void sendMessage(int type, String messageContent, String name) {
